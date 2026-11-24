@@ -109,3 +109,16 @@ class HomeAssistantClient:
         except Exception as err:
             _LOGGER.debug("Supervisor MQTT service not found or not active: %s", err)
         return None
+
+    def get_history_period(self, entity_ids: list, hours: int = 12) -> Any:
+        """Fetch historical state changes for given entity_ids over the last N hours."""
+        if self._disabled or not entity_ids:
+            return []
+        from datetime import datetime, timedelta, timezone
+
+        start_iso = (datetime.now(timezone.utc) - timedelta(hours=max(1, min(hours, 168)))).isoformat()
+        entities_csv = ",".join([e for e in entity_ids if e])
+        endpoint = f"history/period/{start_iso}?filter_entity_id={entities_csv}&minimal_response=true&no_attributes=true"
+        res = self._make_request(endpoint, method="GET", timeout=10.0)
+        return res if isinstance(res, list) else []
+

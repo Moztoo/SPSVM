@@ -4,13 +4,14 @@ import asyncio
 import logging
 import signal
 import sys
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from config import AddonConfig
 from ddp import PS5Discovery
 from ha_client import HomeAssistantClient
 from mqtt_client import PS5MQTTClient
 from session import SessionTracker
+from web_server import StandaloneWebServer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,7 +23,7 @@ _LOGGER = logging.getLogger("ps5_monitor")
 
 
 class PS5MonitorService:
-    """Core daemon service orchestrating probe, session tracking, and reporting."""
+    """Core daemon service orchestrating probe, session tracking, reporting, and standalone web UI."""
 
     def __init__(self, config: AddonConfig):
         self.config = config
@@ -34,7 +35,18 @@ class PS5MonitorService:
         )
         self.ha_client = HomeAssistantClient()
         self.mqtt_client: Optional[PS5MQTTClient] = None
+        self.web_server = StandaloneWebServer(self, host="0.0.0.0", port=8099)
         self._last_state_reported: Optional[str] = None
+
+        self.cached_probe_attrs: Dict[str, Any] = {
+            "ip_address": self.config.ps5_ip,
+            "host_name": None,
+            "host_id": None,
+            "system_version": None,
+        }
+        self.latest_tracker_data: Dict[str, Any] = {}
+        self.last_raw_state: str = "off"
+        self.last_status_code: Optional[int] = None
 
     def setup_mqtt(self) -> None:
         """Initialize and connect MQTT client with auto-discovery."""
@@ -103,6 +115,51 @@ class PS5MonitorService:
             history_attributes,
         )
 
+    async def trigger_immediate_probe(self) -> None:
+        """Perform a single probe + state update cycle immediately."""
+        probe_res = await self.discovery.probe(self.config.ps5_ip, retries=2, timeout=1.0)
+        raw_state = probe_res.state
+        self.last_raw_state = raw_state
+        self.last_status_code = probe_res.status_code
+
+        if probe_res.host_name:
+            self.cached_probe_attrs["host_name"] = probe_res.host_name
+        if probe_res.host_id:
+            self.cached_probe_attrs["host_id"] = probe_res.host_id
+        if probe_res.system_version:
+            self.cached_probe_attrs["system_version"] = probe_res.system_version
+
+        current_power = None
+        current_energy = None
+        if self.config.smart_plug_power_sensor:
+            current_power = self.ha_client.get_float_state(self.config.smart_plug_power_sensor)
+        if self.config.smart_plug_energy_sensor:
+            current_energy = self.ha_client.get_float_state(self.config.smart_plug_energy_sensor)
+
+        tracker_data = self.session_tracker.update_state(
+            raw_state=raw_state,
+            current_power=current_power,
+            current_energy_kwh=current_energy,
+            debounce_seconds=self.config.debounce_seconds,
+        )
+        self.latest_tracker_data = tracker_data
+
+        effective_state = tracker_data.get("effective_state")
+        if effective_state != self._last_state_reported:
+            _LOGGER.info(
+                "PS5 State Transition: %s -> %s (Raw: %s, Code: %s)",
+                self._last_state_reported,
+                effective_state,
+                raw_state,
+                probe_res.status_code,
+            )
+            self._last_state_reported = effective_state
+
+        if self.mqtt_client and self.mqtt_client.is_connected:
+            self.mqtt_client.publish_state(tracker_data, self.cached_probe_attrs)
+
+        self.sync_ha_rest_api(tracker_data, self.cached_probe_attrs)
+
     async def run(self) -> None:
         """Main service loop."""
         self.running = True
@@ -114,64 +171,13 @@ class PS5MonitorService:
         )
 
         self.setup_mqtt()
-
-        # Last known probe attributes
-        cached_probe_attrs = {
-            "ip_address": self.config.ps5_ip,
-            "host_name": None,
-            "host_id": None,
-            "system_version": None,
-        }
+        await self.web_server.start()
 
         while self.running:
             try:
-                # 1. Probe PS5 over UDP
-                probe_res = await self.discovery.probe(self.config.ps5_ip, retries=3, timeout=1.2)
-                raw_state = probe_res.state
+                await self.trigger_immediate_probe()
 
-                if probe_res.host_name:
-                    cached_probe_attrs["host_name"] = probe_res.host_name
-                if probe_res.host_id:
-                    cached_probe_attrs["host_id"] = probe_res.host_id
-                if probe_res.system_version:
-                    cached_probe_attrs["system_version"] = probe_res.system_version
-
-                # 2. Sample Smart Plug sensors if configured
-                current_power = None
-                current_energy = None
-
-                if self.config.smart_plug_power_sensor:
-                    current_power = self.ha_client.get_float_state(self.config.smart_plug_power_sensor)
-                if self.config.smart_plug_energy_sensor:
-                    current_energy = self.ha_client.get_float_state(self.config.smart_plug_energy_sensor)
-
-                # 3. Update Session State Machine
-                tracker_data = self.session_tracker.update_state(
-                    raw_state=raw_state,
-                    current_power=current_power,
-                    current_energy_kwh=current_energy,
-                    debounce_seconds=self.config.debounce_seconds,
-                )
-
-                effective_state = tracker_data.get("effective_state")
-                if effective_state != self._last_state_reported:
-                    _LOGGER.info(
-                        "PS5 State Transition: %s -> %s (Raw: %s, Code: %s)",
-                        self._last_state_reported,
-                        effective_state,
-                        raw_state,
-                        probe_res.status_code,
-                    )
-                    self._last_state_reported = effective_state
-
-                # 4. Publish to MQTT if available
-                if self.mqtt_client and self.mqtt_client.is_connected:
-                    self.mqtt_client.publish_state(tracker_data, cached_probe_attrs)
-
-                # 5. Dual-mode sync: always keep HA Core REST API entities updated
-                self.sync_ha_rest_api(tracker_data, cached_probe_attrs)
-
-                # 6. Determine dynamic poll interval (back off when standby or off)
+                effective_state = self.latest_tracker_data.get("effective_state", "off")
                 if effective_state == "awake" or self.session_tracker.active_session is not None:
                     sleep_time = self.config.poll_interval_seconds
                 else:
@@ -201,11 +207,11 @@ def handle_signals(service: PS5MonitorService, loop: asyncio.AbstractEventLoop) 
         try:
             loop.add_signal_handler(sig, lambda: asyncio.create_task(shutdown(service, loop)))
         except (NotImplementedError, RuntimeError):
-            # In some environments (e.g. non-main thread or windows), add_signal_handler is unsupported
             pass
 
 
 async def shutdown(service: PS5MonitorService, loop: asyncio.AbstractEventLoop) -> None:
+    await service.web_server.stop()
     service.stop()
     tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task()]
     for task in tasks:

@@ -2,6 +2,14 @@
 
 All notable changes to the SPSVM (Sony PS5 Monitor & Session Tracker) project will be documented in this file.
 
+## [1.1.0] - 2026-11-24
+
+### Added
+- **Standalone Omarchy Web Application (`http://[HOST]:8099` + Home Assistant Ingress Sidebar App)**:
+  - Embedded async HTTP server (`web_server.py`) serving a full-viewport standalone Omarchy Shell Web App (`static/index.html`) with PWA manifest (`display: standalone`).
+  - Direct REST API endpoints (`/api/telemetry`, `/api/history?hours=N`, `POST /api/probe`) providing live UDP DDP status, session tracking, electrical smart plug metrics, TP-Link BE230 router telemetry, and downsampled power curves without requiring Lovelace dashboard tabs.
+  - Enabled Home Assistant Ingress (`ingress: true`, `panel_icon: mdi:sony-playstation`, `panel_title: PS5 Monitor`) and direct port `8099/tcp`.
+
 ## [1.0.5] - 2026-11-24
 
 ### Added
