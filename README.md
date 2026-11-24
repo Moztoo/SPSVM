@@ -74,7 +74,7 @@
 2. Click the three dots in the top right corner and select **Repositories**.
 3. Add the repository URL:
    ```text
-   https://github.com/ricardom/SPSVM
+   https://github.com/Moztoo/SPSVM
    ```
 4. Find **PlayStation 5 Monitor & Energy Tracker** in the list and click **Install**.
 5. Go to the **Configuration** tab, enter your PS5's static IP address (e.g. `192.168.1.60`) and optional smart plug entities, then click **Save**.
