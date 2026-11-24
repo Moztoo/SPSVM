@@ -21,6 +21,7 @@ RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
 
 # Copy application files and s6-overlay rootfs
 COPY app/ /app/
+COPY ps5-monitor-card.js /app/ps5-monitor-card.js
 COPY rootfs/ /
 
 # Ensure executable permissions on s6 service

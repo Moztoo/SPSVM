@@ -4,4 +4,11 @@
 # ==============================================================================
 
 bashio::log.info "Starting PlayStation 5 Monitor & Energy Tracker daemon..."
+
+if [ -d "/config/www" ]; then
+    mkdir -p /config/www/community/ps5-monitor-card
+    cp /app/ps5-monitor-card.js /config/www/community/ps5-monitor-card/ps5-monitor-card.js
+    bashio::log.info "Deployed custom Lovelace card to /config/www/community/ps5-monitor-card/"
+fi
+
 exec python3 -u /app/main.py

@@ -2,6 +2,12 @@
 
 All notable changes to the SPSVM (Sony PS5 Monitor & Session Tracker) project will be documented in this file.
 
+## [1.0.3] - 2026-11-24
+
+### Added
+- **Custom PS5 Monitor Lovelace Card**: Built-in standalone custom card (`custom:ps5-monitor-card`) featuring clean, next-gen PlayStation styling, glassmorphism, animated live gaming status, real-time power telemetry, cumulative KPI analytics, and interactive session history.
+- Auto-deploys to `/config/www/community/ps5-monitor-card/` on add-on start.
+
 ## [1.0.2] - 2026-11-24
 
 ### Fixed
