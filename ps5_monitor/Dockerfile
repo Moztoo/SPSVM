@@ -19,9 +19,9 @@ WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
 
-# Copy application files
+# Copy application files and s6-overlay rootfs
 COPY app/ /app/
-COPY run.sh /app/run.sh
-RUN chmod +x /app/run.sh
+COPY rootfs/ /
 
-CMD [ "/app/run.sh" ]
+# Ensure executable permissions on s6 service
+RUN chmod +x /etc/s6-overlay/s6-rc.d/ps5-monitor/run

@@ -1,0 +1,7 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Home Assistant Add-on: SPSVM PS5 Monitor Service
+# ==============================================================================
+
+bashio::log.info "Starting PlayStation 5 Monitor & Energy Tracker daemon..."
+exec python3 -u /app/main.py

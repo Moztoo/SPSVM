@@ -2,6 +2,12 @@
 
 All notable changes to the SPSVM (Sony PS5 Monitor & Session Tracker) project will be documented in this file.
 
+## [1.0.1] - 2026-11-24
+
+### Fixed
+- Fixed `s6-overlay-suexec: fatal: can only run as pid 1` by setting `init: false` in `config.yaml` to prevent Supervisor from injecting Docker's init wrapper over S6-overlay.
+- Migrated add-on service lifecycle to native S6-Overlay v3 architecture (`/etc/s6-overlay/s6-rc.d/ps5-monitor/`).
+
 ## [1.0.0] - 2026-11-24
 
 ### Added
