@@ -2,6 +2,16 @@
 
 All notable changes to the SPSVM (Sony PS5 Monitor & Session Tracker) project will be documented in this file.
 
+## [1.0.5] - 2026-11-24
+
+### Added
+- **Omarchy Shell Edition (v2.0) Custom Dashboard**: Complete redesign of `custom:ps5-monitor-card` embracing the Omarchy / Quickshell / Tiling Window Manager philosophy:
+  - **Surface 1 (Quickshell Top Bar)**: Workspace focus pills (`[1:LIVE]`, `[2:GRAPH]`, `[3:STATS]`, `[4:LOG]`), live active session ticker, and docked system status widgets.
+  - **Surface 2 (Dropdown Panels)**: Interactive pop-up inspection panels for Electrical Telemetry (`TVSocket` W/V/A/VA/PF/Hz), TP-Link BE230 Network & DDP telemetry, and live Theme Engine switcher.
+  - **Surface 3 (Tiled Windows)**: High-density 4-window tiled layout including a real-time SVG Power & Console State Timeline Graph (fetching 1H–48H history from Home Assistant with interactive crosshair tooltips), cumulative KPI matrix + mini session bars, and a filterable TUI session log.
+  - **Surface 4 (Full-Screen Overlays)**: Keyboard-driven Spotlight Command Palette (`⌘K` or `/`), Session Inspector modal, and Raw Entity JSON Inspector.
+  - **Automatic & Switchable Theme Sync**: Native support for Tokyo Night, Catppuccin Mocha, Gruvbox Dark, PS5 Obsidian, and Home Assistant Theme Sync.
+
 ## [1.0.4] - 2026-11-24
 
 ### Fixed

@@ -1,7 +1,7 @@
 name: "PlayStation 5 Monitor & Energy Tracker"
 slug: "ps5_monitor"
 description: "Monitors PS5 power state, session history, and correlates smart plug energy metrics."
-version: "1.0.4"
+version: "1.0.5"
 arch:
   - aarch64
   - amd64
