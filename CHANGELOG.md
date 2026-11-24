@@ -2,6 +2,11 @@
 
 All notable changes to the SPSVM (Sony PS5 Monitor & Session Tracker) project will be documented in this file.
 
+## [1.0.4] - 2026-11-24
+
+### Fixed
+- **Custom Lovelace Card Compatibility**: Added proper `<ha-card>` root wrapper, lifecycle checks in `setConfig` and `connectedCallback`, and hardened all attribute parsers against null/type mismatches so Lovelace renders without "Configuration error".
+
 ## [1.0.3] - 2026-11-24
 
 ### Added
