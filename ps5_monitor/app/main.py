@@ -27,7 +27,7 @@ class PS5MonitorService:
     def __init__(self, config: AddonConfig):
         self.config = config
         self.running = False
-        self.discovery = PS5Discovery(port=987)
+        self.discovery = PS5Discovery()
         self.session_tracker = SessionTracker(
             data_dir=config.data_dir,
             max_history=config.history_max_sessions,

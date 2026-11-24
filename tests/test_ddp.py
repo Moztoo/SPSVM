@@ -38,6 +38,24 @@ class TestPS5Discovery(unittest.TestCase):
         self.assertEqual(result.host_type, "PS5")
         self.assertEqual(result.system_version, "09000000")
 
+    def test_parse_real_ps5_payload(self):
+        """Test parsing real payload received from PS5 (with 'HTTP/1.1 200 Ok')."""
+        payload = (
+            b"HTTP/1.1 200 Ok\n"
+            b"host-id:00E4219DF086\n"
+            b"host-type:PS5\n"
+            b"host-name:PS5-294\n"
+            b"host-request-port:997\n"
+            b"device-discovery-protocol-version:00030010\n"
+            b"system-version:14230000\n"
+        )
+        res = self.discovery.parse_response(payload)
+        self.assertEqual(res.state, "awake")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.host_name, "PS5-294")
+        self.assertEqual(res.host_id, "00E4219DF086")
+        self.assertEqual(res.system_version, "14230000")
+
     def test_parse_standby_status_620(self):
         """Test parsing a STANDBY response with HTTP 620 Server Standby."""
         response_bytes = (

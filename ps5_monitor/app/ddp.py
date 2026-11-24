@@ -49,11 +49,19 @@ class PS5ProbeResult:
         return self.state == "off"
 
 
+DEFAULT_PORTS = (9302, 987)
+
+
 class PS5Discovery:
     """Handles low-level UDP discovery probe queries to PlayStation consoles."""
 
-    def __init__(self, port: int = 987):
-        self.port = port
+    def __init__(self, ports=DEFAULT_PORTS, port: Optional[int] = None):
+        if port is not None:
+            self.ports = (port,)
+        elif isinstance(ports, (list, tuple)):
+            self.ports = tuple(ports)
+        else:
+            self.ports = (ports,)
 
     @staticmethod
     def parse_response(data: bytes) -> PS5ProbeResult:
@@ -120,35 +128,37 @@ class PS5Discovery:
             headers=headers,
         )
 
-    def probe_sync(self, ip: str, retries: int = 3, timeout: float = 1.2) -> PS5ProbeResult:
-        """Send synchronous UDP probe to the PS5 with retries."""
+    def probe_sync(self, ip: str, retries: int = 2, timeout: float = 1.0) -> PS5ProbeResult:
+        """Send synchronous UDP probe to the PS5 with retries across standard ports."""
         if not ip or ip == "0.0.0.0":
             return PS5ProbeResult(state="off")
 
-        for attempt in range(1, retries + 1):
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.settimeout(timeout)
-            try:
-                sock.sendto(PS5_DDP_PROBE_V3, (ip, self.port))
-                data, _ = sock.recvfrom(2048)
-                result = self.parse_response(data)
-                _LOGGER.debug(
-                    "Probe attempt %d/%d to %s:%d succeeded: state=%s, code=%s",
-                    attempt, retries, ip, self.port, result.state, result.status_code
-                )
-                return result
-            except socket.timeout:
-                _LOGGER.debug(
-                    "Probe attempt %d/%d to %s:%d timed out",
-                    attempt, retries, ip, self.port
-                )
-            except OSError as err:
-                _LOGGER.debug(
-                    "Probe attempt %d/%d to %s:%d network error: %s",
-                    attempt, retries, ip, self.port, err
-                )
-            finally:
-                sock.close()
+        for port in self.ports:
+            for attempt in range(1, retries + 1):
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.settimeout(timeout)
+                try:
+                    sock.sendto(PS5_DDP_PROBE_V3, (ip, port))
+                    data, _ = sock.recvfrom(2048)
+                    result = self.parse_response(data)
+                    if result.state in ("awake", "standby"):
+                        _LOGGER.debug(
+                            "Probe to %s:%d succeeded (attempt %d): state=%s, code=%s",
+                            ip, port, attempt, result.state, result.status_code
+                        )
+                        return result
+                except socket.timeout:
+                    _LOGGER.debug(
+                        "Probe attempt %d/%d to %s:%d timed out",
+                        attempt, retries, ip, port
+                    )
+                except OSError as err:
+                    _LOGGER.debug(
+                        "Probe attempt %d/%d to %s:%d network error: %s",
+                        attempt, retries, ip, port, err
+                    )
+                finally:
+                    sock.close()
 
         return PS5ProbeResult(state="off")
 

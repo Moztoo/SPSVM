@@ -2,6 +2,11 @@
 
 All notable changes to the SPSVM (Sony PS5 Monitor & Session Tracker) project will be documented in this file.
 
+## [1.0.2] - 2026-11-24
+
+### Fixed
+- **PS5 Active Discovery Port**: Probe both port `9302` (where active PS5 Remote Play DDP discovery responds with `HTTP/1.1 200 Ok`) and port `987` (used for standby/wake). Resolves issue where a running PS5 was not detected because port 987 times out while active.
+
 ## [1.0.1] - 2026-11-24
 
 ### Fixed
